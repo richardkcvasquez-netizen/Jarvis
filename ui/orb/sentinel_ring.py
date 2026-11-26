@@ -726,6 +726,8 @@ def on_dark_disc(
     Every pixel is either the exact key colour (see-through) or solid, so a
     colour-keyed window shows no pink fringe.
     """
+    if frame.mode != "RGBA":
+        return frame.convert("RGB")  # already colour-keyed: nothing to composite
     w, h = frame.size
     rgba = np.asarray(frame, dtype=np.float32)
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)

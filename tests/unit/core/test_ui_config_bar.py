@@ -4,9 +4,9 @@ from __future__ import annotations
 from dodaios.core.config import UIConfig
 
 
-def test_defaults_select_jarvis_bar():
+def test_defaults_select_the_sentinel_ring_window():
     c = UIConfig()
-    assert c.orb_style == "jarvis_bar"
+    assert c.orb_style == "voice_orb"
     assert c.bar_persistent is True
     assert c.bar_accent == "#e7c46e"
 

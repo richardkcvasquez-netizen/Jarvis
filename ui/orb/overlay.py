@@ -1909,16 +1909,19 @@ class OrbOverlay:
         renderer = self._renderer
         t = time.perf_counter() - self._t0
         img = renderer.render(t, self._mode, self._ext_level)
+        layered = getattr(self, "_layered", None)
         if self._mac_transparent:
             # macOS has no color key — the ring's frame already carries a real
-            # alpha channel, so it goes straight to the native layer.
+            # alpha channel; a colour-keyed RGB frame gets one from the key.
+            if img.mode != "RGBA":
+                img = key_to_alpha(img)
             if self._present_native(img):
                 return
-        elif self._layered is not None:
-            if self._layered.present(img):
+        elif layered is not None:
+            if layered.present(img):
                 self._layered_refusals = 0
                 return
-            self._layered_refusals += 1
+            self._layered_refusals = getattr(self, "_layered_refusals", 0) + 1
             if self._layered_refusals < LAYERED_GIVE_UP_FRAMES:
                 return
             # Per-pixel alpha keeps failing: switch this window to the colour
@@ -1927,7 +1930,7 @@ class OrbOverlay:
                 "per-pixel alpha refused %d frames in a row; the ring falls back to its dark disc",
                 self._layered_refusals,
             )
-            self._layered.close()
+            layered.close()
             self._layered = None
             if self._root is not None:
                 _apply_color_key(self._root)

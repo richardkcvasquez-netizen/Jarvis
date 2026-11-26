@@ -20,10 +20,10 @@ def test_default_instance_boots_the_configured_style(monkeypatch, configured) ->
     assert boot_overlay_style(configured) == configured
 
 
-def test_default_instance_blank_style_means_the_bar(monkeypatch) -> None:
+def test_default_instance_blank_style_means_the_ring_window(monkeypatch) -> None:
     monkeypatch.delenv(INSTANCE_ENV_VAR, raising=False)
-    assert boot_overlay_style("") == "jarvis_bar"
-    assert boot_overlay_style(None) == "jarvis_bar"
+    assert boot_overlay_style("") == "voice_orb"
+    assert boot_overlay_style(None) == "voice_orb"
 
 
 @pytest.mark.parametrize("configured", OVERLAY_STYLES)
