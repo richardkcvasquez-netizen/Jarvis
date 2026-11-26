@@ -20,6 +20,8 @@ vi.mock("@/components/MascotGigi", () => ({
 // The three data hooks resolve to safe, loaded defaults.
 const overlayState = vi.hoisted(() => ({ style: "jarvis_bar" }));
 vi.mock("@/hooks/useOverlayStyle", () => ({
+  DEFAULT_OVERLAY_STYLE: "voice_orb",
+  OVERLAY_STYLES: ["jarvis_bar", "voice_orb", "none"],
   useOverlayStyle: () => ({
     config: { style: overlayState.style, options: ["jarvis_bar", "voice_orb", "none"] },
     loading: false,
@@ -60,6 +62,11 @@ describe("OverlayTaskbarGroup", () => {
     expect(screen.getByTestId("jarvis-bar-preview")).toBeDefined();
     const bar = screen.getByTestId("jarvis-bar-preview");
     expect(bar.querySelector('[data-testid="bar-preview-levels"]')?.children).toHaveLength(9);
+  });
+
+  it("shows the Sentinel Ring as the floating window's preview", () => {
+    render(<OverlayTaskbarGroup />);
+    expect(screen.getByTestId("sentinel-ring-preview")).toBeDefined();
   });
 
   it("does not offer bar-only controls for another display style", () => {

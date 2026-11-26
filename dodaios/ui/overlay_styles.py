@@ -15,17 +15,21 @@ locale, and give it a preview graphic. Nothing else needs touching.
 """
 from __future__ import annotations
 
-#: The slim always-available bar (the default).
+#: The slim always-available bar.
 BAR_STYLE = "jarvis_bar"
 
 #: Styles drawn by the floating orb window (``ui.orb.overlay.OrbOverlay``):
-#: ``voice_orb``, the procedural weather sphere, the desktop twin of the
-#: in-app orb. It pops up for a conversation and can be dragged onto any
-#: monitor.
+#: ``voice_orb``, which draws the Sentinel Ring, the desktop twin of the
+#: in-app look. It pops up for a conversation and can be dragged onto any
+#: monitor. The id predates the ring and is kept so saved configs still match.
 ORB_STYLES: tuple[str, ...] = ("voice_orb",)
 
 #: No on-screen overlay at all.
 HIDDEN_STYLE = "none"
+
+#: What a fresh install shows on the desktop: the floating window, which draws
+#: the Sentinel Ring (ADR-0048). A saved choice, the Bar included, is kept.
+DEFAULT_OVERLAY_STYLE = ORB_STYLES[0]
 
 #: Every style the settings axis offers, in the order the pickers show them.
 OVERLAY_STYLES: tuple[str, ...] = (BAR_STYLE, *ORB_STYLES, HIDDEN_STYLE)

@@ -1499,8 +1499,8 @@ class UIConfig(BaseModel):
     # same machine looks local, so whoever forwards the port must turn this ON
     # (surface_security.open_access_granted).
     require_browser_login: bool = False
-    # Overlay style: "jarvis_bar" (default), "voice_orb" or "none"; old pet styles load as the bar.
-    orb_style: str = "jarvis_bar"
+    # Overlay style (overlay_styles.DEFAULT_OVERLAY_STYLE, the Sentinel Ring window), bar or none.
+    orb_style: str = "voice_orb"
     bar_persistent: bool = True
     # Hex accent the bar lights up with during activity (gold on-brand).
     bar_accent: str = "#e7c46e"
@@ -1514,9 +1514,9 @@ class UIConfig(BaseModel):
     # it is resolved; the validator sanitizes only the SHAPE. Old desktop-pet keys are ignored
     # extras.
     pet_id: str = DEFAULT_PET_ID
-    # In-app look where the voice orb sits (docs/looks.md): "orb" or a look id; a missing look falls
-    # back to the orb.
-    look_id: str = ORB_LOOK_ID
+    # In-app look where the voice orb sits (docs/looks.md, ADR-0048): the Sentinel Ring by default,
+    # "orb" or another look id; a missing look falls back to the orb.
+    look_id: str = "sentinel-ring"
     # Remembered "open with" choice for Outputs artifacts ("default", "browser" or an editor key);
     # empty = ask.
     preferred_opener: str = ""

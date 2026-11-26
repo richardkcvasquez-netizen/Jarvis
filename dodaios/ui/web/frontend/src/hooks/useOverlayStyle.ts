@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 
 /**
  * On-screen overlay style from GET /api/settings/overlay-style.
- * "jarvis_bar" = the Dodaios Bar (default), "voice_orb" = the procedural voice orb,
+ * "voice_orb" = the floating window that draws the Sentinel Ring (default),
+ * "jarvis_bar" = the Dodaios Bar,
  * "none" = hidden. Pets are never drawn on the desktop; they live in the app only
  * (`docs/pets.md`). A saved "pet" or "mascot" comes back from the backend as "jarvis_bar".
  *
@@ -12,6 +13,9 @@ import { useCallback, useEffect, useState } from "react";
  * order both pickers render.
  */
 export type OverlayStyle = "jarvis_bar" | "voice_orb" | "none";
+
+/** What a fresh install shows (backend: ``DEFAULT_OVERLAY_STYLE``). */
+export const DEFAULT_OVERLAY_STYLE: OverlayStyle = "voice_orb";
 
 /** Client-side fallback while GET is in flight (same order as the backend). */
 export const OVERLAY_STYLES: OverlayStyle[] = [

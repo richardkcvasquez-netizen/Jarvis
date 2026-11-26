@@ -14,7 +14,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from dodaios.core.events import SystemStateChanged, VoiceSessionStarted
@@ -29,11 +28,9 @@ sys.modules.pop("ui", None)
 try:  # noqa: SIM105 — intentional try-import for the discovery quirk
     from ui.orb import controls  # type: ignore[import-not-found]
     from ui.orb.bus_bridge import OrbBusBridge  # type: ignore[import-not-found]
-    from ui.orb.voice_orb import VoiceOrbRenderer  # type: ignore[import-not-found]
 except ModuleNotFoundError:  # pragma: no cover
     pytest.skip("ui.orb not available on the pytest PYTHONPATH", allow_module_level=True)
 
-KEY = (255, 0, 255)
 
 
 class _FakeBus:
@@ -182,35 +179,3 @@ def test_the_bar_renders_the_flourish_then_the_plain_listening_look() -> None:
 
 
 # -- voice orb -----------------------------------------------------------------
-
-
-def _outside_sphere_pixels(frame: np.ndarray, radius_share: float = 0.8) -> int:
-    size = frame.shape[0]
-    yy, xx = np.mgrid[0:size, 0:size]
-    r = np.hypot(xx - size / 2 + 0.5, yy - size / 2 + 0.5) / (size / 2)
-    ring = (r > radius_share) & (r < 0.98)
-    return int((np.any(frame != KEY, axis=-1) & ring).sum())
-
-
-def test_the_voice_orb_circles_a_comet_while_connecting() -> None:
-    connecting = VoiceOrbRenderer(size=160, color_key=KEY)
-    idle = VoiceOrbRenderer(size=160, color_key=KEY)
-    for step in range(12):
-        a = np.asarray(connecting.render(step * 0.05, "connect", None))
-        b = np.asarray(idle.render(step * 0.05, "idle", None))
-    assert _outside_sphere_pixels(a) > _outside_sphere_pixels(b) + 40
-
-
-def test_the_voice_orb_sends_one_ring_out_when_the_call_connects() -> None:
-    orb = VoiceOrbRenderer(size=160, color_key=KEY)
-    t = 0.0
-    for _ in range(10):
-        t += 0.05
-        orb.render(t, "connect", None)
-    t += 0.05
-    orb.render(t, "listen", 0.0)
-    assert orb._connected_age < controls.CONNECTED_S  # noqa: SLF001
-    for _ in range(30):
-        t += 0.05
-        orb.render(t, "listen", 0.0)
-    assert orb._connected_age == float("inf")  # noqa: SLF001

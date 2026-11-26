@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel Ring</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; }
+</style>
+<script src="params.js"></script>
+<script src="pose.js"></script>
+</head>
+<body>
+<canvas id="ring" aria-hidden="true"></canvas>
+<script>
+// The Sentinel Ring look (docs/looks.md). A golden network of linked nodes
+// around a glowing core. It listens only to the host's messages and draws;
+// it loads nothing from the network. Sizes, speeds and colours come from
+// params.js, the same file the desktop renderer reads.
+(() => {
+  const P = window.SENTINEL_RING;
+  const Pose = window.SentinelPose;
+  const canvas = document.getElementById('ring');
+  const ctx = canvas.getContext('2d');
+  const off = document.createElement('canvas');
+  const o = off.getContext('2d');
+  const TAU = Math.PI * 2;
+
+  // Seeded random, so every launch draws the same network.
+  let seed = 0x5e7714e1;
+  const rand = () => { seed = (Math.imul(seed ^ (seed >>> 15), 0x2c1b3c6d) + 0x6d2b79f5) >>> 0; return seed / 4294967296; };
+
+  const probe = document.createElement('canvas').getContext('2d');
+  probe.filter = 'blur(2px)';
+  const filterOK = probe.filter === 'blur(2px)';
+
+  let state = 'idle';
+  let output = 0;
+  let reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cur = { ...P.states.idle };
+  let hue = P.hue;
+  let yaw = 0.6;
+  let envS = 0.3;
+  let size = P.size.idle;
+
+  window.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (!msg || typeof msg !== 'object') return;
+    if (msg.type === 'look:init') {
+      state = Pose.stateKey(P, String(msg.state || 'idle'));
+      reduced = Boolean(msg.reducedMotion) || reduced;
+    } else if (msg.type === 'look:state') {
+      state = Pose.stateKey(P, String(msg.state || 'idle'));
+    } else if (msg.type === 'look:levels') {
+      // The microphone level is ignored on purpose: only the assistant's voice moves the ring.
+      output = Pose.clamp01(msg.output);
+    }
+  });
+
+  // ---------- Geometry ----------
+  const sph = (lat, lon, r = 1) => [r * Math.cos(lat) * Math.cos(lon), r * Math.sin(lat), r * Math.cos(lat) * Math.sin(lon)];
+  const norm = v => { const m = Math.hypot(v[0], v[1], v[2]); return [v[0] / m, v[1] / m, v[2] / m]; };
+
+  const N = P.nodes, nodes = [];
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < N; i++) {
+    const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = golden * i;
+    const v = norm([Math.cos(th) * r + (rand() - .5) * .07, y + (rand() - .5) * .07, Math.sin(th) * r + (rand() - .5) * .07]);
+    nodes.push({ v, seed: rand() * TAU, hub: rand() < 0.07, h: rand() });
+  }
+  const edges = [], adj = nodes.map(() => []), seen = new Set();
+  for (let i = 0; i < N; i++) {
+    const d = [];
+    for (let j = 0; j < N; j++) if (j !== i) {
+      const a = nodes[i].v, b = nodes[j].v;
+      d.push([(a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2, j]);
+    }
+    d.sort((p, q) => p[0] - q[0]);
+    for (let n = 0; n < (nodes[i].hub ? 6 : 3); n++) {
+      const j = d[n][1], key = Math.min(i, j) + '-' + Math.max(i, j);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const a = nodes[i].v, b = nodes[j].v;
+      const m = norm([a[0] + b[0], a[1] + b[1], a[2] + b[2]]), k = 1 + (rand() - .5) * .09;
+      edges.push({ a: i, b: j, mid: [m[0] * k, m[1] * k, m[2] * k] });
+      adj[i].push(j); adj[j].push(i);
+    }
+  }
+
+  const traces = [];
+  for (let t = 0; t < 300; t++) {
+    let lon = rand() * TAU, lat = Math.asin(rand() * 2 - 1) * 0.95;
+    let dir = rand() < .5 ? 0 : 1;
+    const steps = 3 + Math.floor(rand() * 9), step = (0.025 + rand() * 0.05) * (rand() < .5 ? -1 : 1);
+    const rr = 0.97 + rand() * 0.05;
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      pts.push(sph(lat, lon, rr));
+      if (dir) lon += step / Math.max(.3, Math.cos(lat)); else lat = Math.max(-1.45, Math.min(1.45, lat + step));
+      if (rand() < .28) dir ^= 1;
+    }
+    traces.push({ pts, bright: rand() < .22, h: rand() });
+  }
+
+  const spokes = [];
+  for (let s = 0; s < 18; s++) spokes.push({ v: norm([rand() - .5, rand() - .5, rand() - .5]), bright: rand() < .4, h: rand() });
+
+  const inner = [], innerEdges = [], innerLinks = [];
+  const centers = Array.from({ length: 9 }, () => { const v = norm([rand() - .5, rand() - .5, rand() - .5]), r = 0.25 + rand() * 0.45; return [v[0] * r, v[1] * r, v[2] * r]; });
+  for (let i = 0; i < 200; i++) {
+    const c = centers[i % centers.length], s = 0.24;
+    inner.push({ v: [c[0] + (rand() - .5) * s * 2, c[1] + (rand() - .5) * s * 2, c[2] + (rand() - .5) * s * 2], h: rand() });
+  }
+  {
+    const seenI = new Set();
+    for (let i = 0; i < inner.length; i++) {
+      const d = [];
+      for (let j = 0; j < inner.length; j++) if (j !== i) {
+        const a = inner[i].v, b = inner[j].v;
+        d.push([(a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2, j]);
+      }
+      d.sort((p, q) => p[0] - q[0]);
+      for (let n = 0; n < 3; n++) {
+        const j = d[n][1], key = Math.min(i, j) + '-' + Math.max(i, j);
+        if (!seenI.has(key)) { seenI.add(key); innerEdges.push([i, j]); }
+      }
+    }
+    for (let l = 0; l < 50; l++) innerLinks.push([Math.floor(rand() * inner.length), Math.floor(rand() * N)]);
+  }
+
+  const dust = [];
+  for (let i = 0; i < 1400; i++) {
+    const v = norm([rand() - .5, rand() - .5, rand() - .5]);
+    const r = rand() < .85 ? 0.88 + rand() * 0.16 : 0.25 + rand() * 0.6;
+    dust.push({ v: [v[0] * r, v[1] * r, v[2] * r], seed: rand() * TAU, big: rand() < .06, h: rand() });
+  }
+
+  const pulses = [];
+  let pulseAcc = 0;
+
+  // ---------- Canvas ----------
+  let W = 0, H = 0, dpr = 1;
+  function resize() {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = off.width = Math.max(1, Math.round(W * dpr));
+    canvas.height = off.height = Math.max(1, Math.round(H * dpr));
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const col = (l, a) => `hsla(${hue}, 100%, ${l}%, ${a})`;
+
+  const HIST = 64, hist = new Float32Array(HIST).fill(0.3);
+  let histIdx = 0, histT = 0;
+  function pushEnv(t, e) {
+    if (t - histT > 0.5) histT = t;
+    while (histT < t) { histT += 0.01; hist[++histIdx % HIST] = e; }
+  }
+  const envAt = lag => hist[((histIdx - Math.round(lag * 100)) % HIST + HIST) % HIST];
+
+  let AMP = 0, BREATH = 1, R = 100, SX = 1.18, cy = 1, sy = 0, ct = 1, st = 0;
+  const D = 3.4;
+  function project(v, h = 0.5) {
+    const rad = Math.hypot(v[0], v[1], v[2]);
+    const e = envAt(0.03 + rad * 0.22 + h * 0.14) - 0.3;
+    const act = Math.max(0, e) * (0.5 + h) * AMP * 4;
+    const d = BREATH + AMP * (0.55 + 0.9 * h) * e;
+    const x = v[0] * d, y = v[1] * d, z = v[2] * d;
+    const x1 = x * cy - z * sy, z1 = x * sy + z * cy;
+    const y2 = y * ct - z1 * st, z2 = y * st + z1 * ct;
+    const f = D / (D - z2);
+    return [x1 * f * R * SX, y2 * f * R, Math.max(0, Math.min(1, (z2 + 1) / 2)), act];
+  }
+  const buckets = n => Array.from({ length: n }, () => new Path2D());
+
+  function ring(radius, incl, spin, lw, light, alpha, segs = 140) {
+    const B = 6, paths = buckets(B), ci = Math.cos(incl), si = Math.sin(incl), cs = Math.cos(spin), ss = Math.sin(spin);
+    let prev = null;
+    for (let s = 0; s <= segs; s++) {
+      const a = s / segs * TAU;
+      const x = Math.cos(a) * radius, z = Math.sin(a) * radius, y = 0;
+      const y1 = y * ci - z * si, z1 = y * si + z * ci;
+      const p = project([x * cs - z1 * ss, y1, x * ss + z1 * cs]);
+      if (prev) {
+        const bi = Math.min(B - 1, Math.floor((prev[2] + p[2]) / 2 * B));
+        paths[bi].moveTo(prev[0], prev[1]); paths[bi].lineTo(p[0], p[1]);
+      }
+      prev = p;
+    }
+    for (let bi = 0; bi < B; bi++) {
+      const d = (bi + .5) / B;
+      o.lineWidth = lw * (0.5 + d * 0.8);
+      o.strokeStyle = col(light, alpha * (0.15 + d * d * 0.85));
+      o.stroke(paths[bi]);
+    }
+  }
+
+  let last = performance.now();
+  // Reduced motion: time stands still for everything except the speaking swell.
+  let still = 0;
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05); last = now;
+    const clock = now / 1000;
+    if (!reduced) still = clock;
+    const t = still;
+    const target = P.states[state];
+    const k = 1 - Math.pow(0.02, dt);
+    for (const key of ['amp', 'spin', 'core', 'pulses', 'dim']) cur[key] = lerp(cur[key], target[key], k);
+    hue = lerp(hue, state === 'error' ? P.errorHue : P.hue, k);
+    if (!reduced) yaw += dt * cur.spin;
+
+    size = Pose.smoothSize(P, size, Pose.sizeTarget(P, state, output, t, reduced), dt);
+
+    const rawEnv = state === 'speaking' ? 0.3 + 0.7 * output
+      : state === 'listening' && !reduced ? 0.4 + 0.3 * Math.sin(t * 2.5) : 0.3;
+    envS += (rawEnv - envS) * (1 - Math.exp(-dt * 5));
+    const env = envS;
+    pushEnv(clock, env);
+    AMP = 0.24 * cur.amp; BREATH = 1 + (reduced ? 0 : 0.012 * Math.sin(t * 1.5));
+    R = Math.min(W / (2 * SX), H / 2) * 0.82 * size;
+    const tilt = 0.32 + Math.sin(t * 0.21) * 0.06;
+    cy = Math.cos(yaw); sy = Math.sin(yaw); ct = Math.cos(tilt); st = Math.sin(tilt);
+
+    o.setTransform(dpr, 0, 0, dpr, 0, 0);
+    o.clearRect(0, 0, W, H);
+    o.save();
+    o.translate(W / 2, H / 2);
+    o.globalCompositeOperation = 'lighter';
+    o.lineCap = 'round';
+
+    const b = cur.core * (0.7 + 0.3 * (state === 'speaking' ? env : 0.5 + 0.5 * Math.sin(t * 1.6)));
+    o.save(); o.scale(SX, 1);
+    const haze = o.createRadialGradient(0, 0, 0, 0, 0, R * 1.2);
+    haze.addColorStop(0, col(60, 0.22 * b));
+    haze.addColorStop(0.5, col(50, 0.07));
+    haze.addColorStop(1, col(45, 0));
+    o.fillStyle = haze; o.beginPath(); o.arc(0, 0, R * 1.2, 0, TAU); o.fill();
+    o.restore();
+
+    const PP = nodes.map(n => project(n.v, n.h));
+
+    {
+      const IP = inner.map(n => project(n.v, n.h));
+      const B = 5, paths = buckets(B);
+      for (const [a, c] of innerEdges) {
+        const p = IP[a], q = IP[c], bi = Math.min(B - 1, Math.floor((p[2] + q[2]) / 2 * B));
+        paths[bi].moveTo(p[0], p[1]); paths[bi].lineTo(q[0], q[1]);
+      }
+      for (const [a, c] of innerLinks) {
+        const p = IP[a], q = PP[c], bi = Math.min(B - 1, Math.floor((p[2] + q[2]) / 2 * B));
+        paths[bi].moveTo(p[0], p[1]); paths[bi].lineTo(q[0], q[1]);
+      }
+      for (let bi = 0; bi < B; bi++) {
+        const d = (bi + .5) / B;
+        o.lineWidth = 0.5 + d * 0.5; o.strokeStyle = col(62, 0.03 + d * d * 0.28); o.stroke(paths[bi]);
+      }
+      for (const p of IP) {
+        const a = Math.min(1, (0.1 + p[2] * 0.5) * (1 + p[3] * 4)), s = 1.2 + p[3] * 2.5;
+        o.fillStyle = col(80, a); o.fillRect(p[0] - s / 2, p[1] - s / 2, s, s);
+      }
+    }
+
+    {
+      const B = 6, paths = buckets(B);
+      for (const e of edges) {
+        const p = PP[e.a], q = PP[e.b], m = project(e.mid, (nodes[e.a].h + nodes[e.b].h) / 2);
+        const bi = Math.min(B - 1, Math.floor((p[2] + q[2]) / 2 * B));
+        paths[bi].moveTo(p[0], p[1]); paths[bi].lineTo(m[0], m[1]); paths[bi].lineTo(q[0], q[1]);
+      }
+      for (let bi = 0; bi < B; bi++) {
+        const d = (bi + .5) / B;
+        o.lineWidth = 0.5 + d * 0.7;
+        o.strokeStyle = col(55 + d * 12, 0.05 + d * d * 0.45);
+        o.stroke(paths[bi]);
+      }
+    }
+
+    {
+      const B = 5, dim = buckets(B), hot = buckets(B);
+      for (const tr of traces) {
+        const pp = tr.pts.map(v => project(v, tr.h));
+        const d = pp.reduce((s, p) => s + p[2], 0) / pp.length;
+        const path = (tr.bright ? hot : dim)[Math.min(B - 1, Math.floor(d * B))];
+        path.moveTo(pp[0][0], pp[0][1]);
+        for (let i = 1; i < pp.length; i++) path.lineTo(pp[i][0], pp[i][1]);
+      }
+      for (let bi = 0; bi < B; bi++) {
+        const d = (bi + .5) / B;
+        o.lineWidth = 0.6 + d * 0.6; o.strokeStyle = col(58, 0.04 + d * d * 0.4); o.stroke(dim[bi]);
+        o.lineWidth = 1 + d * 1.1; o.strokeStyle = col(70, 0.08 + d * d * 0.8); o.stroke(hot[bi]);
+      }
+    }
+
+    ring(1.04, 0.12, 0, 3.2, 68, 0.95);
+    ring(1.0, 0.12, 0, 1, 85, 0.6);
+    ring(0.78, -0.35, yaw * 0.4, 1.6, 66, 0.6);
+    ring(1.0, Math.PI / 2, 0.3, 1.1, 62, 0.55);
+    ring(1.0, Math.PI / 2, 1.9, 0.9, 62, 0.4);
+    ring(1.14, 0.75, -yaw * 1.6, 1, 60, 0.35);
+
+    {
+      const B = 4, paths = buckets(B), hotP = buckets(B);
+      for (const s of spokes) {
+        const p = project(s.v, s.h), bi = Math.min(B - 1, Math.floor(p[2] * B));
+        (s.bright ? hotP : paths)[bi].moveTo(0, 0);
+        (s.bright ? hotP : paths)[bi].lineTo(p[0], p[1]);
+      }
+      for (let bi = 0; bi < B; bi++) {
+        const d = (bi + .5) / B;
+        o.lineWidth = 0.7; o.strokeStyle = col(60, 0.05 + d * 0.25); o.stroke(paths[bi]);
+        o.lineWidth = 1.4; o.strokeStyle = col(72, 0.1 + d * 0.55); o.stroke(hotP[bi]);
+      }
+    }
+
+    if (!reduced) pulseAcc += dt * cur.pulses;
+    while (pulseAcc > 1) {
+      pulseAcc--;
+      const e = edges[Math.floor(rand() * edges.length)];
+      pulses.push({ a: e.a, b: e.b, p: 0, speed: 1.4 + rand() * 2, hops: state === 'thinking' ? 5 : 3 });
+    }
+    for (let i = pulses.length - 1; i >= 0; i--) {
+      const s = pulses[i];
+      s.p += dt * s.speed;
+      if (s.p >= 1) {
+        if (--s.hops > 0) { const nx = adj[s.b]; s.a = s.b; s.b = nx[Math.floor(rand() * nx.length)]; s.p = 0; }
+        else { pulses.splice(i, 1); continue; }
+      }
+      const p = PP[s.a], q = PP[s.b];
+      const x = lerp(p[0], q[0], s.p), y = lerp(p[1], q[1], s.p), d = lerp(p[2], q[2], s.p);
+      o.beginPath(); o.moveTo(p[0], p[1]); o.lineTo(x, y);
+      o.lineWidth = 1.5; o.strokeStyle = col(78, 0.2 + d * 0.6); o.stroke();
+      o.beginPath(); o.arc(x, y, 1.4 + d * 1.8, 0, TAU);
+      o.fillStyle = col(90, 0.5 + d * 0.5); o.fill();
+    }
+
+    for (let i = 0; i < N; i++) {
+      const p = PP[i], n = nodes[i];
+      const tw = 0.55 + 0.45 * Math.sin(t * 2.2 + n.seed * 3);
+      const r = (n.hub ? 2.2 : 1) * (0.5 + p[2]) * (1 + p[3] * 1.5);
+      o.beginPath(); o.arc(p[0], p[1], r, 0, TAU);
+      o.fillStyle = col(n.hub ? 82 : 70, Math.min(1, (0.1 + p[2] * p[2] * 0.85) * tw * (1 + p[3] * 4)));
+      o.fill();
+    }
+
+    for (const g of dust) {
+      const p = project(g.v, g.h);
+      const tw = Math.max(0, Math.sin(t * (1.5 + g.seed) + g.seed * 7));
+      const a = Math.min(1, (0.08 + p[2] * 0.7) * tw * (1 + p[3] * 3));
+      if (a < 0.03) continue;
+      o.fillStyle = col(g.big ? 88 : 72, a);
+      const s = g.big ? 2.4 : 1.1;
+      o.fillRect(p[0] - s / 2, p[1] - s / 2, s, s);
+    }
+
+    const er = R * (1 + 0.04 * cur.amp * env);
+    const cg = o.createRadialGradient(0, 0, 0, 0, 0, er * 0.42);
+    cg.addColorStop(0, col(80, 0.55 * b));
+    cg.addColorStop(0.3, col(62, 0.22 * b));
+    cg.addColorStop(1, col(50, 0));
+    o.fillStyle = cg; o.beginPath(); o.arc(0, 0, er * 0.42, 0, TAU); o.fill();
+
+    const rings2d = [
+      [0.13, 0, TAU, 1, 0.55, 0],
+      [0.18, 0.4, 4.6, 2, 0.75, 0.8],
+      [0.24, 0, TAU, 0.8, 0.35, 0],
+      [0.3, 1.2, 3.9, 1.4, 0.55, -0.5],
+      [0.3, 4.4, 5.9, 1.4, 0.55, -0.5],
+      [0.4, 0, TAU, 0.7, 0.22, 0],
+    ];
+    for (const [rr, a0, a1, lw, al, sp] of rings2d) {
+      const rot = t * sp * (state === 'thinking' ? 3 : 1);
+      o.beginPath(); o.arc(0, 0, er * rr, a0 + rot, a1 + rot);
+      o.lineWidth = lw; o.strokeStyle = col(72, al * (0.6 + 0.4 * b)); o.stroke();
+    }
+    o.save(); o.rotate(-t * 0.3);
+    for (let i = 0; i < 48; i++) {
+      const a = i / 48 * TAU, r1 = er * 0.205, r2 = er * (i % 4 ? 0.215 : 0.228);
+      o.beginPath(); o.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); o.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+      o.lineWidth = 1; o.strokeStyle = col(70, 0.4); o.stroke();
+    }
+    o.restore();
+
+    o.globalCompositeOperation = 'source-over';
+    o.beginPath(); o.arc(0, 0, er * 0.075, 0, TAU);
+    o.fillStyle = `hsla(${hue}, 60%, 4%, 0.9)`; o.fill();
+    o.globalCompositeOperation = 'lighter';
+    o.beginPath(); o.arc(0, 0, er * 0.09, 0, TAU);
+    o.lineWidth = 3 + 2 * b; o.strokeStyle = col(85, 0.95); o.stroke();
+    o.beginPath(); o.arc(0, 0, er * 0.11, 0, TAU);
+    o.lineWidth = 1; o.strokeStyle = col(70, 0.6); o.stroke();
+
+    o.restore();
+
+    // Composite with bloom; paused dims the whole ring.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'lighter';
+    if (filterOK) {
+      ctx.filter = `blur(${22 * dpr * size}px)`; ctx.globalAlpha = 0.55 * cur.dim; ctx.drawImage(off, 0, 0);
+      ctx.filter = `blur(${6 * dpr * size}px)`; ctx.globalAlpha = 0.9 * cur.dim; ctx.drawImage(off, 0, 0);
+      ctx.filter = 'none';
+    }
+    ctx.globalAlpha = cur.dim;
+    ctx.drawImage(off, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  // Ready once the network is built, not after the first frame: a hidden frame draws none.
+  window.parent.postMessage({ type: 'look:ready', format: 'dodaios-look/1' }, '*');
+})();
+</script>
+</body>
+</html>

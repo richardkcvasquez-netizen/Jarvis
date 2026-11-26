@@ -3,8 +3,17 @@
 A look is an optional visual that takes the voice orb's place in the app: an
 animation that reacts to what Dodaios does (listening, thinking, speaking) and
 to how loud the microphone and the voice are. Looks come from the Community
-Marketplace; Dodaios ships one example, **Pulse Ring**
-(`dodaios/ui/looks/builtin/pulse-ring`).
+Marketplace; Dodaios ships two:
+
+- **Sentinel Ring** (`dodaios/ui/looks/builtin/sentinel-ring`), the default: a
+  golden network of linked nodes around a glowing core that swells with
+  Dodaios's own voice. The floating desktop window draws the same ring
+  (`ui/orb/sentinel_ring.py`) from the same `params.js` (ADR-0048).
+- **Pulse Ring** (`dodaios/ui/looks/builtin/pulse-ring`), the small example to
+  copy when making a look.
+
+The voice orb is what a look falls back to when it fails to start, and what
+the app shows when the look is set to `orb`.
 
 A look can only draw. It runs in a sandboxed frame with no network, no access
 to the app's API, no cookies and no storage. The app sends it the voice state

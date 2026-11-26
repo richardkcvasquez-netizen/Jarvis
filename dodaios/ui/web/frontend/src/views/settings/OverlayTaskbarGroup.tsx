@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   useOverlayStyle,
   OVERLAY_STYLES,
+  DEFAULT_OVERLAY_STYLE,
   type OverlayStyle,
 } from "@/hooks/useOverlayStyle";
 import { StylePreview } from "@/components/overlay/OverlayStylePreviews";
@@ -28,7 +29,7 @@ import { SettingsCard, SettingsRow, SettingsSection } from "@/views/settings/Set
 export function OverlayTaskbarGroup() {
   const t = useT();
   const overlay = useOverlayStyle();
-  const isBar = (overlay.config?.style ?? "jarvis_bar") === "jarvis_bar";
+  const isBar = (overlay.config?.style ?? DEFAULT_OVERLAY_STYLE) === "jarvis_bar";
 
   return (
     <SettingsSection title={t("settings_view.overlay_taskbar_group_title")}>
@@ -224,7 +225,7 @@ function OverlayStylePanel({ overlay }: { overlay: ReturnType<typeof useOverlayS
   const t = useT();
   const { config, loading, error, saveStyle } = overlay;
   const pushToast = useEventStore((s) => s.pushToast);
-  const [style, setStyle] = useState<OverlayStyle>("jarvis_bar");
+  const [style, setStyle] = useState<OverlayStyle>(DEFAULT_OVERLAY_STYLE);
   const [saving, setSaving] = useState(false);
   const [needsRestart, setNeedsRestart] = useState(false);
   const { restart, restarting, buttonLabel: restartLabel } = useRestartApp();
@@ -249,7 +250,7 @@ function OverlayStylePanel({ overlay }: { overlay: ReturnType<typeof useOverlayS
         pushToast("warning", t("settings_view.overlay_style.restart_required"));
       }
     } catch (e) {
-      setStyle(config?.style ?? "jarvis_bar");
+      setStyle(config?.style ?? DEFAULT_OVERLAY_STYLE);
       pushToast("error", (e as Error).message);
     } finally {
       setSaving(false);

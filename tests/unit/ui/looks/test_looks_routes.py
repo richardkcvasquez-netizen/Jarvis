@@ -30,9 +30,9 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     return SimpleNamespace(client=TestClient(app), app=app, toml=toml)
 
 
-def test_list_has_the_builtin_example_and_defaults_to_orb(env: SimpleNamespace) -> None:
+def test_list_has_the_builtin_looks_and_defaults_to_the_sentinel_ring(env: SimpleNamespace) -> None:
     body = env.client.get("/api/looks").json()
-    assert body["active"] == "orb"
+    assert body["active"] == "sentinel-ring"
     ring = next(look for look in body["looks"] if look["id"] == "pulse-ring")
     assert ring["frame_url"] == "/looks-frame/pulse-ring/index.html"
     assert ring["preview_url"] == "/api/looks/pulse-ring/preview"

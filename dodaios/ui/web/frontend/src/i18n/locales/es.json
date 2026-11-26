@@ -3490,14 +3490,14 @@
     },
     "overlay_style": {
       "title": "Estilo de visualización",
-      "description": "Dodaios Bar tiene un indicador de voz para hablar y controles para un nuevo chat de texto, silenciar el micrófono, audio del asistente y llamadas. Elige Orbe de voz para otro estilo, o Ninguno para ocultarlo. Puedes arrastrar el orbe de voz a un monitor.",
+      "description": "El Sentinel Ring flota en tu escritorio mientras hablas con Dodaios y se expande cuando Dodaios habla; puedes arrastrarlo a cualquier monitor. Dodaios Bar, en cambio, tiene un indicador de voz y controles para un nuevo chat de texto, silenciar el micrófono, audio del asistente y llamadas. Elige Ninguno para ocultarlo.",
       "label": "Estilo",
       "save": "Guardar",
       "saved": "Estilo de visualización cambiado.",
       "restart_required": "Guardado: reinicia {name} para aplicar.",
       "options": {
-        "jarvis_bar": "Dodaios Bar (predeterminada)",
-        "voice_orb": "Orbe de voz",
+        "jarvis_bar": "Dodaios Bar",
+        "voice_orb": "Sentinel Ring (predeterminado)",
         "none": "Ninguno (oculto)"
       }
     },

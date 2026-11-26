@@ -3490,14 +3490,14 @@
     },
     "overlay_style": {
       "title": "显示样式",
-      "description": "Dodaios Bar 有一个语音指示器，以及新建文字对话、麦克风静音、助手音频和通话的控件。选择“语音光球”可切换为其他显示样式，选择“无”则隐藏悬浮层。拖动语音光球即可将其放到某台显示器上。",
+      "description": "与 Dodaios 对话时，Sentinel Ring 会悬浮在桌面上，并在 Dodaios 说话时随之扩张；可将其拖到任意显示器上。Dodaios Bar 则提供语音指示器，以及新建文字对话、麦克风静音、助手音频和通话的控件。选择“无”可隐藏悬浮层。",
       "label": "样式",
       "save": "保存",
       "saved": "显示样式已切换。",
       "restart_required": "已保存，重启{name}后生效。",
       "options": {
-        "jarvis_bar": "Dodaios Bar（默认）",
-        "voice_orb": "语音光球",
+        "jarvis_bar": "Dodaios Bar",
+        "voice_orb": "Sentinel Ring（默认）",
         "none": "无（隐藏）"
       }
     },

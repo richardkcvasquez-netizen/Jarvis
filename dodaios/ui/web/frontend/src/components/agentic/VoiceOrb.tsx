@@ -36,7 +36,7 @@ interface Motion {
    * How far the cloud field may drag the COLOUR ramp out of its vertical
    * order. At rest it only softens the horizon; while thinking it is what
    * makes the grey stops visibly churn through each other instead of
-   * sitting in bands. Kept in step with the desktop twin (`ui/orb/voice_orb.py`).
+   * sitting in bands.
    */
   colorChurn: number;
 }
@@ -127,7 +127,7 @@ const MOTIONS: Record<VoiceState, Motion> = {
  * at rest, every beat hit the `Math.min(1, …)` ceiling, and the result was a
  * pulse nobody could see.
  */
-// Kept identical to the spawned desktop renderer (`ui/orb/voice_orb.py`).
+// The desktop window draws the Sentinel Ring instead (`ui/orb/sentinel_ring.py`).
 const BASE_SCALE = 0.75;
 
 /** How much of the remaining headroom a full-volume moment claims. */

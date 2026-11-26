@@ -47,7 +47,7 @@ class FakeWindow:
 
 def _app(*, persistent: bool, orb: object, bridge: object) -> DesktopApp:
     app = DesktopApp.__new__(DesktopApp)
-    app.cfg = SimpleNamespace(ui=SimpleNamespace(bar_persistent=persistent))
+    app.cfg = SimpleNamespace(ui=SimpleNamespace(orb_style="jarvis_bar", bar_persistent=persistent))
     app._orb = orb
     app._bridge = bridge
     # No detached solo windows: the closing callback consults the registry —
