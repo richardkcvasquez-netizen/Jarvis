@@ -13,10 +13,12 @@ History of approaches tried and why we landed on Tkinter:
       straight through to the desktop.
 
 Rendering pipeline:
-    :class:`ui.orb.voice_orb.VoiceOrbRenderer` computes one RGB frame per tick
-    with the magenta colour key around the sphere. Windows keys it out; macOS
-    gets an RGBA frame (:func:`key_to_alpha`) shown through a native layer
-    (``ui/orb/mac_layer.py``).
+    :class:`ui.orb.sentinel_ring.SentinelRingRenderer` computes one RGBA frame
+    per tick (ADR-0048). Windows shows it with true per-pixel alpha through
+    ``dodaios.ui.dodaiosbar.win_layered`` (the bar's layered window); macOS
+    shows it through a native layer (``ui/orb/mac_layer.py``). Where neither
+    works, :func:`ui.orb.sentinel_ring.on_dark_disc` puts the ring on a dark
+    hard-edged disc and the magenta colour key cuts the window out.
 
 The window used to wear the mascot and the desktop pet as well. Pets live in
 the app only now (``docs/pets.md``), so the voice orb is the one look left.
@@ -55,6 +57,7 @@ from PIL import Image, ImageTk
 
 from dodaios.core.config import DEFAULT_CONFIG_FILE as JARVIS_TOML_PATH
 from dodaios.core.win32_dpi import ensure_dpi_awareness as _ensure_dpi_awareness
+from dodaios.ui.dodaiosbar import win_layered
 from dodaios.ui.dodaiosbar.modes import ACTIVE_VOICE_MODES, MODES
 from dodaios.ui.overlay_styles import LEGACY_STYLE_ALIASES, ORB_STYLES
 from ui.orb import controls as orb_controls
@@ -69,17 +72,22 @@ from ui.orb.drag_persistence import (
     screens_from_tk,
 )
 from ui.orb.mac_layer import MacLayerPresenter
+from ui.orb.sentinel_ring import SentinelRingRenderer, on_dark_disc
 from ui.orb.taskbar import (
     MascotAnchor,
     compute_mascot_position,
     get_taskbar_info,
     get_tray_notify_rect,
 )
-from ui.orb.voice_orb import VoiceOrbRenderer
+
+#: Consecutive refused per-pixel frames after which the window gives up on
+#: them and shows the ring on its dark disc under the colour key (ADR-0048).
+#: One refusal is normal: Tk swapping its wrapper window costs a frame.
+LAYERED_GIVE_UP_FRAMES = 30
 
 #: The look this window wears (ONE definition, in dodaios.ui.overlay_styles):
-#: ``voice_orb``, the procedural weather sphere — the desktop twin of the
-#: in-app orb. Always on top and draggable to any monitor.
+#: ``voice_orb``, which draws the Sentinel Ring — the desktop twin of the
+#: in-app look. Always on top and draggable to any monitor.
 DEFAULT_ORB_STYLE = "voice_orb"
 
 
@@ -140,6 +148,7 @@ MUTE_GESTURE_WINDOW_MS = 600
 
 COLOR_KEY_HEX = "#FF00FF"
 COLOR_KEY_RGB = np.array([255, 0, 255], dtype=np.uint8)
+COLOR_KEY_TUPLE = (255, 0, 255)
 
 
 def key_to_alpha(img: Image.Image) -> Image.Image:
@@ -706,8 +715,11 @@ class OrbOverlay:
         self._mic_reactive = mic_reactive
         self._root: tk.Tk | None = None
         self._canvas: tk.Canvas | None = None
-        self._renderer: VoiceOrbRenderer | None = None
+        self._renderer: SentinelRingRenderer | None = None
         self._mac_transparent = False
+        #: Windows per-pixel alpha (ADR-0048); ``None`` means the colour key and the dark disc.
+        self._layered: win_layered.LayeredWindow | None = None
+        self._layered_refusals = 0
         # Cached anchor of the window's top-left corner.
         self._mascot_x: int = 0
         self._mascot_y: int = 0
@@ -816,7 +828,20 @@ class OrbOverlay:
                 )
                 self._root.configure(bg=COLOR_KEY_HEX)
         else:
-            if not _apply_color_key(self._root):
+            # Windows shows the ring with real per-pixel alpha when it can
+            # (ADR-0048). The colour key is applied only without it: a window
+            # that has a colour key refuses per-pixel alpha.
+            self._layered = None
+            if win_layered.LayeredWindow.supported():
+                try:
+                    self._root.update_idletasks()
+                    self._layered = win_layered.LayeredWindow(self._root)
+                except Exception:  # noqa: BLE001 — the colour key below is the fallback
+                    logging.getLogger("jarvis.orb").debug(
+                        "orb layered window unavailable", exc_info=True
+                    )
+                    self._layered = None
+            if self._layered is None and not _apply_color_key(self._root):
                 # No per-pixel transparency on this session: showing the window
                 # would put an opaque magenta square on the user's desktop.
                 # Tear the root down and report started, so the caller's
@@ -1764,15 +1789,12 @@ class OrbOverlay:
         """
         self._style = _coerce_style(style)
 
-    def _build_renderer(self) -> VoiceOrbRenderer | None:
+    def _build_renderer(self) -> SentinelRingRenderer | None:
         try:
-            return VoiceOrbRenderer(
-                size=self._win_w,
-                color_key=(int(COLOR_KEY_RGB[0]), int(COLOR_KEY_RGB[1]), int(COLOR_KEY_RGB[2])),
-            )
+            return SentinelRingRenderer(size=self._win_w)
         except Exception as exc:  # noqa: BLE001
             logging.getLogger("jarvis.orb").warning(
-                "VoiceOrbRenderer init failed (%s); overlay will stay hidden.", exc
+                "SentinelRingRenderer init failed (%s); overlay will stay hidden.", exc
             )
             return None
 
@@ -1888,11 +1910,30 @@ class OrbOverlay:
         t = time.perf_counter() - self._t0
         img = renderer.render(t, self._mode, self._ext_level)
         if self._mac_transparent:
-            # macOS has no color key — the frame carries a real alpha
-            # channel instead (magenta → fully transparent).
-            img = key_to_alpha(img)
+            # macOS has no color key — the ring's frame already carries a real
+            # alpha channel, so it goes straight to the native layer.
             if self._present_native(img):
                 return
+        elif self._layered is not None:
+            if self._layered.present(img):
+                self._layered_refusals = 0
+                return
+            self._layered_refusals += 1
+            if self._layered_refusals < LAYERED_GIVE_UP_FRAMES:
+                return
+            # Per-pixel alpha keeps failing: switch this window to the colour
+            # key and the dark disc for the rest of its life.
+            logging.getLogger("jarvis.orb").warning(
+                "per-pixel alpha refused %d frames in a row; the ring falls back to its dark disc",
+                self._layered_refusals,
+            )
+            self._layered.close()
+            self._layered = None
+            if self._root is not None:
+                _apply_color_key(self._root)
+            img = on_dark_disc(img, COLOR_KEY_TUPLE)
+        else:
+            img = on_dark_disc(img, COLOR_KEY_TUPLE)
 
         # The PhotoImage must be kept as self._photo — otherwise Tkinter
         # garbage-collects the image before it gets rendered.  It must also be

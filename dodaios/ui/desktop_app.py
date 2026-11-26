@@ -34,6 +34,7 @@ from dodaios.core.config import DATA_DIR, JarvisConfig, load_config
 from dodaios.core.instance import current_instance
 from dodaios.core.process_utils import drop_inherited_electron_node_mode, ensure_standard_streams
 from dodaios.i18n import catalog as i18n_catalog
+from dodaios.ui.overlay_styles import DEFAULT_OVERLAY_STYLE
 from dodaios.ui.section_windows import section_window
 
 if TYPE_CHECKING:
@@ -172,7 +173,7 @@ def boot_overlay_style(configured: str | None, *, instance: Any | None = None) -
     """
     from dodaios.ui.overlay_styles import normalize_overlay_style
 
-    configured = normalize_overlay_style(configured) or "jarvis_bar"
+    configured = normalize_overlay_style(configured) or DEFAULT_OVERLAY_STYLE
     identity = instance if instance is not None else current_instance()
     return configured if identity.owns_ambient_duties else "none"
 
@@ -2659,7 +2660,7 @@ class DesktopApp:
             OVERLAY_STYLES,
         )
 
-        style = (style or "jarvis_bar").strip()
+        style = (style or DEFAULT_OVERLAY_STYLE).strip()
         if style not in OVERLAY_STYLES:
             return {"ok": False, "applied_live": False, "style": style}
         bridge = getattr(self, "_bridge", None)
@@ -3078,14 +3079,13 @@ class DesktopApp:
 
         # On-screen overlay in its own Tk daemon thread — the bus bridge reacts
         # to SystemStateChanged and drives whichever surface is selected.
-        # Style is chosen by [ui].orb_style: "jarvis_bar" (slim default),
-        # "voice_orb" (the floating orb window), or "none". Every real surface shares OrbBusBridge.
+        # [ui].orb_style: the Sentinel Ring window (default), the bar or none; all share OrbBusBridge.
         try:
             from loguru import logger
 
             from dodaios.platform.probes import has_overlay
 
-            configured_style = self.cfg.ui.orb_style or "jarvis_bar"
+            configured_style = self.cfg.ui.orb_style or DEFAULT_OVERLAY_STYLE
             orb_style = boot_overlay_style(configured_style)
             overlay_ok = has_overlay()
 
@@ -5631,7 +5631,7 @@ class DesktopApp:
         try:
             # Mirror the boot wiring in ``_start_speech_and_orb``: bar_persistent
             # only governs the jarvis bar; the voice orb is always hide-at-idle.
-            orb_style = getattr(self.cfg.ui, "orb_style", "jarvis_bar") or "jarvis_bar"
+            orb_style = getattr(self.cfg.ui, "orb_style", DEFAULT_OVERLAY_STYLE) or DEFAULT_OVERLAY_STYLE
             persistent = bool(getattr(self.cfg.ui, "bar_persistent", True))
             is_bar = orb_style == "jarvis_bar"
             bridge._hide_on_idle = self._hide_on_idle_for(orb_style)

@@ -3490,14 +3490,14 @@
     },
     "overlay_style": {
       "title": "Anzeige-Stil",
-      "description": "Die Dodaios Bar hat eine Sprachanzeige zum Sprechen und Tasten für einen neuen Textchat, Mikrofon-Stummschaltung, Assistenten-Audio und Anrufe. Wähle alternativ den Sprach-Orb, oder Keine zum Ausblenden. Den Sprach-Orb kannst du auf einen Monitor ziehen.",
+      "description": "Der Sentinel Ring schwebt auf dem Desktop, während du mit Dodaios sprichst, und schwillt an, wenn Dodaios spricht; du kannst ihn auf jeden Monitor ziehen. Die Dodaios Bar hat stattdessen eine Sprachanzeige und Tasten für einen neuen Textchat, Mikrofon-Stummschaltung, Assistenten-Audio und Anrufe. Wähle Keins, um das Overlay auszublenden.",
       "label": "Stil",
       "save": "Speichern",
       "saved": "Anzeige-Stil gewechselt.",
       "restart_required": "Gespeichert — {name} neu starten zum Übernehmen.",
       "options": {
-        "jarvis_bar": "Dodaios Bar (Standard)",
-        "voice_orb": "Voice-Orb",
+        "jarvis_bar": "Dodaios Bar",
+        "voice_orb": "Sentinel Ring (Standard)",
         "none": "Keins (ausgeblendet)"
       }
     },

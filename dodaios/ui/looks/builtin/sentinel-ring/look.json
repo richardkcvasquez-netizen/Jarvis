@@ -1,0 +1,11 @@
+{
+  "format": "dodaios-look/1",
+  "id": "sentinel-ring",
+  "name": "Sentinel Ring",
+  "description": "A golden network of linked nodes around a glowing core. It breathes with Dodaios's voice: larger when it speaks, filling its frame when it speaks loudly.",
+  "author": "Richard Vasquez",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "entry": "index.html",
+  "preview": "preview.svg"
+}

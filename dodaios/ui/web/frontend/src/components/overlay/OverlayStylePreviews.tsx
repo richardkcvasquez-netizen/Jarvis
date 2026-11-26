@@ -1,4 +1,3 @@
-import { VoiceOrb } from "@/components/agentic/VoiceOrb";
 import type { OverlayStyle } from "@/hooks/useOverlayStyle";
 import {
   PILL_H,
@@ -26,10 +25,10 @@ import {
 
 /** Maps an overlay style to its preview graphic. */
 export function StylePreview({ style }: { style: OverlayStyle }) {
-  // The voice orb is its own portrait: the very renderer the desktop overlay
-  // runs, at thumbnail size. Held at "idle" so the picker shows the calm
-  // resting look rather than pretending a session is live.
-  if (style === "voice_orb") return <VoiceOrb state="idle" size={46} />;
+  // The floating window draws the Sentinel Ring (ADR-0048); its still portrait
+  // is the look's own preview picture, so the picker never pretends a session
+  // is live.
+  if (style === "voice_orb") return <SentinelRingPreview />;
   if (style === "jarvis_bar") return <BarPreview />;
   return <NonePreview />;
 }
@@ -65,6 +64,32 @@ export function BarPreview() {
             );
           })}
         </g>
+      </svg>
+    </div>
+  );
+}
+
+/** The Sentinel Ring at rest, as drawn in its look's `preview.svg`. */
+export function SentinelRingPreview() {
+  return (
+    <div className="flex h-10 w-24 shrink-0 items-center justify-center" data-testid="sentinel-ring-preview">
+      <svg viewBox="0 0 120 120" width={46} height={46} aria-hidden>
+        <defs>
+          <radialGradient id="sentinel-core" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stopColor="#ffd98a" stopOpacity={0.9} />
+            <stop offset="0.35" stopColor="#e0a030" stopOpacity={0.35} />
+            <stop offset="1" stopColor="#e0a030" stopOpacity={0} />
+          </radialGradient>
+        </defs>
+        <circle cx={60} cy={60} r={44} fill="url(#sentinel-core)" opacity={0.5} />
+        <g fill="none" stroke="#f0b850" strokeLinecap="round">
+          <ellipse cx={60} cy={60} rx={44} ry={10} strokeWidth={2.4} transform="rotate(-7 60 60)" />
+          <ellipse cx={60} cy={60} rx={12} ry={40} strokeWidth={0.9} opacity={0.6} />
+          <ellipse cx={60} cy={60} rx={34} ry={40} strokeWidth={0.8} opacity={0.45} />
+          <circle cx={60} cy={60} r={40} strokeWidth={0.8} opacity={0.6} />
+          <circle cx={60} cy={60} r={9} strokeWidth={2.5} />
+        </g>
+        <circle cx={60} cy={60} r={4.5} fill="#0d0904" />
       </svg>
     </div>
   );

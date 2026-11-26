@@ -14,14 +14,14 @@ import pytest
 
 import ui.orb.overlay as overlay_mod
 from ui.orb.overlay import OrbOverlay, _apply_color_key, _coerce_style
-from ui.orb.voice_orb import VoiceOrbRenderer
+from ui.orb.sentinel_ring import SentinelRingRenderer
 
 
-def test_the_orb_window_builds_the_voice_orb_renderer() -> None:
+def test_the_orb_window_draws_the_sentinel_ring() -> None:
     overlay = OrbOverlay(style="voice_orb")
 
     assert overlay._style == "voice_orb"
-    assert isinstance(overlay._build_renderer(), VoiceOrbRenderer)
+    assert isinstance(overlay._build_renderer(), SentinelRingRenderer)
 
 
 @pytest.mark.parametrize("style", ["mascot", "pet", "orb", "nonsense", None, ""])

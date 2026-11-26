@@ -3490,14 +3490,14 @@
     },
     "overlay_style": {
       "title": "Display style",
-      "description": "The Dodaios Bar has a voice indicator to talk and controls for a new text chat, microphone mute, assistant audio and calls. Choose Voice orb for another display style, or None to hide the overlay. Drag the voice orb to place it on a monitor.",
+      "description": "The Sentinel Ring floats on your desktop while you talk to Dodaios and swells as it speaks; drag it onto any monitor. The Dodaios Bar instead has a voice indicator and controls for a new text chat, microphone mute, assistant audio and calls. Choose None to hide the overlay.",
       "label": "Style",
       "save": "Save",
       "saved": "Display style switched.",
       "restart_required": "Saved — restart {name} to apply.",
       "options": {
-        "jarvis_bar": "Dodaios Bar (default)",
-        "voice_orb": "Voice orb",
+        "jarvis_bar": "Dodaios Bar",
+        "voice_orb": "Sentinel Ring (default)",
         "none": "None (hidden)"
       }
     },

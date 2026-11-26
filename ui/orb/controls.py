@@ -13,7 +13,7 @@ Two constraints shape the implementation, and neither is cosmetic:
   (magenta) to become transparent. A pixel that is a *blend* of button and key
   colour survives as a pink fringe, so every disc is composed through a BINARY
   mask — the antialiasing lives strictly inside the disc, where the glyph is.
-  Same rule as ``ui.orb.voice_orb``.
+  Same rule as ``ui.orb.sentinel_ring.on_dark_disc``.
 * **Supersampled glyphs.** A 4 px stroke drawn directly at 28 px aliases into a
   staircase. Glyphs are drawn at 4x on their own layer and downscaled with
   LANCZOS, exactly as ``dodaios.ui.dodaiosbar.renderer`` does for its mic.
