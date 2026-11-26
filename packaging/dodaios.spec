@@ -385,7 +385,8 @@ excludes = [
 block_cipher = None
 
 a = Analysis(
-    ["dodaios/__main__.py"],
+    # Absolute: PyInstaller 6.x resolves a relative script against the spec folder.
+    [str(PROJECT_ROOT / "dodaios" / "__main__.py")],
     pathex=[str(PROJECT_ROOT)],
     binaries=[],
     datas=datas,
