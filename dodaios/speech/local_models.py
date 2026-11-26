@@ -683,6 +683,14 @@ def _piper_bundle(name: str, *, label: str, language: str, gender: str) -> Sherp
     )
 
 
+#: Kokoro-82M v1.0 as the sherpa-onnx project converts it: one ONNX model, one
+#: style table holding every speaker (``voices.bin``), and the English
+#: lexicons plus ``espeak-ng-data`` for words a lexicon does not list. Unlike a
+#: Piper voice the bundle is MULTI-speaker: the speaker is a number handed to
+#: each generation, so one download serves every Kokoro voice.
+KOKORO_MODEL_ID = "kokoro-multi-lang-v1_0"
+
+
 #: Every model bundle the local providers can use, keyed by id.
 #:
 #: The voices are picked for CONSISTENCY across languages rather than one at a
@@ -767,6 +775,22 @@ SHERPA_BUNDLES: dict[str, SherpaBundle] = {
         language="es",
         gender="feminine",
     ),
+    # Not tagged with a language or gender: those describe a single-speaker
+    # Piper voice, and the Piper provider picks its voices by them. Kokoro's
+    # speakers are chosen inside the bundle by the Kokoro provider.
+    KOKORO_MODEL_ID: SherpaBundle(
+        model_id=KOKORO_MODEL_ID,
+        label="Kokoro-82M v1.0",
+        required_files=(
+            "model.onnx",
+            "voices.bin",
+            "tokens.txt",
+            "espeak-ng-data",
+            "lexicon-us-en.txt",
+            "lexicon-gb-en.txt",
+        ),
+        archive_url=f"{_PIPER_RELEASE}{KOKORO_MODEL_ID}.tar.bz2",
+    ),
 }
 
 #: The voices the local TTS install fetches — one per supported language, all
@@ -823,6 +847,16 @@ LOCAL_PROVIDERS: tuple[LocalProvider, ...] = (
         download_size=f"about {round(len(PIPER_DEFAULT_VOICES) * _PIPER_VOICE_DOWNLOAD_MB, -1)} MB",
         pip_package=SHERPA_ONNX_PACKAGE,
         bundles=PIPER_DEFAULT_VOICES,
+    ),
+    LocalProvider(
+        provider_id="kokoro-local",
+        tier="tts",
+        runtime="sherpa-onnx",
+        model_id=KOKORO_MODEL_ID,
+        model_label="Kokoro-82M",
+        download_size="about 350 MB",
+        pip_package=SHERPA_ONNX_PACKAGE,
+        bundles=(KOKORO_MODEL_ID,),
     ),
 )
 

@@ -100,6 +100,14 @@ def _speech_text(text: str) -> str:
     return " ".join(_MARKUP_RE.sub(" ", text or "").split())
 
 
+def pcm16(samples: Any) -> bytes:
+    """float32 samples in [-1, 1] as the int16 PCM the pipeline plays."""
+    values = np.asarray(samples, dtype=np.float32)
+    if values.size == 0:
+        return b""
+    return (np.clip(values, -1.0, 1.0) * _INT16_FULL_SCALE).astype(np.int16).tobytes()
+
+
 class PiperLocalTTS:
     """Local neural text-to-speech (keyless, on-device, multilingual by voice)."""
 
@@ -354,12 +362,7 @@ class PiperLocalTTS:
         stopped = threading.Event()
         failure: list[Exception] = []
         emitted = threading.Event()
-
-        def _pcm(samples: Any) -> bytes:
-            values = np.asarray(samples, dtype=np.float32)
-            if values.size == 0:
-                return b""
-            return (np.clip(values, -1.0, 1.0) * _INT16_FULL_SCALE).astype(np.int16).tobytes()
+        _pcm = pcm16
 
         def _put(value: bytes | object) -> bool:
             while not stopped.is_set():
@@ -535,3 +538,43 @@ def voice_files(model_id: str) -> dict[str, Path]:
     from dodaios.speech.sherpa_models import model_paths
 
     return model_paths(model_id)
+
+
+# -- shared with the other sherpa-onnx voices --------------------------------
+# The Kokoro provider reaches the local model catalog through these, so the one
+# plugin -> speech dependency stays in this module (scripts/ci/check_layers.py).
+
+
+def bundle_installed(model_id: str) -> bool:
+    """Whether the catalogued bundle *model_id* is completely on disk."""
+    from dodaios.speech.local_models import bundle_present
+
+    return bundle_present(model_id)
+
+
+def load_sherpa_runtime(needs: tuple[str, ...]) -> Any:
+    """The sherpa-onnx module, loaded through the readiness probe.
+
+    Raises ``RuntimeError`` with the sentence a user can act on when the runtime
+    is missing or does not load.
+    """
+    from dodaios.speech.local_models import import_runtime
+
+    try:
+        return import_runtime("sherpa-onnx", needs=needs)
+    except ImportError as exc:
+        raise RuntimeError(
+            "The local speech runtime (sherpa-onnx) is not installed or "
+            f"cannot be loaded ({exc}), so the on-device voice cannot "
+            "speak. Install it from the API-Keys view."
+        ) from exc
+
+
+def sherpa_major_version() -> int:
+    """Major version of the loaded sherpa-onnx runtime."""
+    return _sherpa_major_version()
+
+
+def speech_text(text: str) -> str:
+    """The words of *text* without Markdown, on one line."""
+    return _speech_text(text)

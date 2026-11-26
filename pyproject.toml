@@ -587,6 +587,9 @@ vertex-stt = "dodaios.plugins.stt.gemini_api:VertexSTT"
 # piper1-gpl library. Native sherpa builds can still include GPL-licensed
 # phonemization components; redistribution must account for their own terms.
 piper-local = "dodaios.plugins.tts.piper_local:PiperLocalTTS"
+# Kokoro-82M (Apache-2.0) on the same sherpa-onnx runtime: more natural English
+# speakers than Piper, at a larger download and more CPU per sentence.
+kokoro-local = "dodaios.plugins.tts.kokoro_local:KokoroLocalTTS"
 inworld = "dodaios.plugins.tts.inworld_tts:InworldTTS"
 elevenlabs = "dodaios.plugins.tts.elevenlabs_tts:ElevenLabsTTS"
 gemini-flash-tts = "dodaios.plugins.tts.gemini_flash_tts:GeminiFlashTTS"
