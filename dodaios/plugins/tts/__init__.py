@@ -621,6 +621,61 @@ def build_tts_from_config(tts_cfg: Any) -> Any:
     return FallbackTTS(primary, secondary, fallback_voice=fallback_voice)
 
 
+def _build_piper_local(tts_cfg: Any) -> Any:
+    """The on-device Piper voices."""
+    try:
+        from dodaios.plugins.tts.piper_local import PiperLocalTTS
+    except ImportError as exc:
+        raise RuntimeError(
+            f"TTS provider 'piper-local' configured, but the plugin is not "
+            f"importable: {exc}. Check that "
+            f"dodaios/plugins/tts/piper_local.py exists.",
+        ) from exc
+    # No voice_de/voice_en pass-through: a Piper voice IS a language, so the
+    # provider resolves the file from the turn's language itself. What it
+    # does carry over is the speaker PROFILE, derived from whichever curated
+    # voice the config already names — so switching to the local voice keeps
+    # the masculine/feminine choice the user made on their cloud provider
+    # instead of silently changing who is speaking (voice-profile
+    # continuity, 2026-07-17).
+    from dodaios.plugins.tts.curated_catalog import voice_gender
+
+    profile = voice_gender(getattr(tts_cfg, "voice_de", None)) or voice_gender(
+        getattr(tts_cfg, "voice_en", None)
+    )
+    return PiperLocalTTS(gender=profile, speed=tts_cfg.speed)
+
+
+def _build_kokoro_local(tts_cfg: Any) -> Any:
+    """The on-device Kokoro voice, speaking as the configured speaker."""
+    try:
+        from dodaios.plugins.tts.kokoro_local import KOKORO_VOICES, KokoroLocalTTS
+    except ImportError as exc:
+        raise RuntimeError(
+            f"TTS provider 'kokoro-local' configured, but the plugin is not "
+            f"importable: {exc}. Check that "
+            f"dodaios/plugins/tts/kokoro_local.py exists.",
+        ) from exc
+    # Kokoro speaks English, so the English voice field names the speaker;
+    # voice_de is read second for a config that set only that one. A value
+    # from another family ("Charon") falls through to the default speaker.
+    candidates = (
+        (getattr(tts_cfg, "voice_en", None) or "").strip(),
+        (getattr(tts_cfg, "voice_de", None) or "").strip(),
+    )
+    speaker = next((value for value in candidates if value in KOKORO_VOICES), None)
+    return KokoroLocalTTS(voice=speaker, speed=tts_cfg.speed)
+
+
+#: The keyless voices that run on this machine, by every accepted spelling.
+_LOCAL_TTS_BUILDERS: dict[str, Any] = {
+    "piper-local": _build_piper_local,
+    "piper": _build_piper_local,
+    "kokoro-local": _build_kokoro_local,
+    "kokoro": _build_kokoro_local,
+}
+
+
 def _build_provider(tts_cfg: Any, provider: str) -> Any:
     """Build a single TTS provider instance for ``provider`` (no fallback wrap)."""
     allow_sapi5 = bool(getattr(tts_cfg, "allow_sapi5_fallback", False))
@@ -770,28 +825,9 @@ def _build_provider(tts_cfg: Any, provider: str) -> Any:
             speed=tts_cfg.speed,
         )
 
-    if provider in ("piper-local", "piper"):
-        try:
-            from dodaios.plugins.tts.piper_local import PiperLocalTTS
-        except ImportError as exc:
-            raise RuntimeError(
-                f"TTS provider 'piper-local' configured, but the plugin is not "
-                f"importable: {exc}. Check that "
-                f"dodaios/plugins/tts/piper_local.py exists.",
-            ) from exc
-        # No voice_de/voice_en pass-through: a Piper voice IS a language, so the
-        # provider resolves the file from the turn's language itself. What it
-        # does carry over is the speaker PROFILE, derived from whichever curated
-        # voice the config already names — so switching to the local voice keeps
-        # the masculine/feminine choice the user made on their cloud provider
-        # instead of silently changing who is speaking (voice-profile
-        # continuity, 2026-07-17).
-        from dodaios.plugins.tts.curated_catalog import voice_gender
-
-        profile = voice_gender(getattr(tts_cfg, "voice_de", None)) or voice_gender(
-            getattr(tts_cfg, "voice_en", None)
-        )
-        return PiperLocalTTS(gender=profile, speed=tts_cfg.speed)
+    local_builder = _LOCAL_TTS_BUILDERS.get(provider)
+    if local_builder is not None:
+        return local_builder(tts_cfg)
 
     if provider in _VERTEX_TTS_ALIASES:
         try:
