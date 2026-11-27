@@ -480,8 +480,10 @@ def whisper_status(model: str) -> LocalModelStatus:
 
 
 def bundle_present(model_id: str, *, data_dir: str | None = None) -> bool:
-    """True when the catalogued bundle *model_id* is complete on disk."""
-    bundle = SHERPA_BUNDLES.get(model_id)
+    """True when the catalogued (or hand-added) bundle *model_id* is complete on disk."""
+    from dodaios.speech.custom_voices import sherpa_bundle  # imports this module
+
+    bundle = sherpa_bundle(model_id, data_dir=data_dir)
     if bundle is None:
         return False
     return sherpa_model_present(model_id, data_dir=data_dir, required_files=bundle.required_files)
