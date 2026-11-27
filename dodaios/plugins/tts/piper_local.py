@@ -146,9 +146,11 @@ class PiperLocalTTS:
 
     # -- voice selection ----------------------------------------------------
     def _catalog(self) -> dict[str, Any]:
+        from dodaios.speech.custom_voices import custom_piper_bundles
         from dodaios.speech.local_models import SHERPA_BUNDLES
 
-        return {model_id: bundle for model_id, bundle in SHERPA_BUNDLES.items() if bundle.language}
+        catalog = {**SHERPA_BUNDLES, **custom_piper_bundles()}
+        return {model_id: bundle for model_id, bundle in catalog.items() if bundle.language}
 
     def _installed_voices(self) -> dict[str, Any]:
         """Catalogued voices whose files are actually on this machine.
@@ -353,9 +355,7 @@ class PiperLocalTTS:
                 "voice output to a provider you have a key for."
             )
         engine = await self._engine_for(model_id)
-        from dodaios.speech.local_models import SHERPA_BUNDLES
-
-        model_language = SHERPA_BUNDLES[model_id].language
+        model_language = self._catalog()[model_id].language
         sample_rate = int(getattr(engine, "sample_rate", 0) or 0)
         chunks: queue.Queue[bytes | object] = queue.Queue(maxsize=8)
         end = object()

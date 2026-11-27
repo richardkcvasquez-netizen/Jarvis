@@ -219,9 +219,9 @@ def model_paths(model_id: str, *, data_dir: str | None = None) -> dict[str, Path
     Providers ask for this instead of composing paths themselves, so the
     directory layout stays a fact of this module alone.
     """
-    from dodaios.speech.local_models import SHERPA_BUNDLES
+    from dodaios.speech.custom_voices import sherpa_bundle
 
-    bundle = SHERPA_BUNDLES.get(model_id)
+    bundle = sherpa_bundle(model_id, data_dir=data_dir)
     directory = sherpa_model_dir(model_id, data_dir=data_dir)
     names = bundle.required_files if bundle is not None else ()
     return {name: directory / name for name in names}
