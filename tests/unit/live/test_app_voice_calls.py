@@ -146,7 +146,9 @@ def test_the_switch_is_saved_and_read_back(tmp_path, monkeypatch):
     from dodaios.core import config_writer
     from dodaios.core.config import load_config
 
-    monkeypatch.setattr(config_writer, "_update_config_soll_section", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        config_writer, "_update_config_soll_section", lambda *_a, **_k: None  # i18n-allow
+    )
     path = tmp_path / "jarvis.toml"
     path.write_text("[tts]\nprovider = \"piper-local\"\n", encoding="utf-8")
     assert load_config(path).tts.speak_calls is False
