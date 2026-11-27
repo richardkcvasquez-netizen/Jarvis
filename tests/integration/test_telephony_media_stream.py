@@ -212,3 +212,19 @@ def test_call_is_refused_when_no_realtime_session_can_hold_it(app, sessions):
     assert calls[0]["status"] == "failed"
     assert app.state.telephony_manager.active_calls == 0
 
+
+
+def test_a_call_whose_socket_closes_without_stop_is_not_left_in_progress(app, sessions):
+    """The phone line dropped (or the socket closed before ``stop`` was read).
+
+    The call is over either way, so recent calls must not show it in progress.
+    """
+    with TestClient(app) as client:
+        with client.websocket_connect("/api/telephony/media") as ws:
+            ws.send_json(_start("CA7"))
+            ws.send_json({"event": "media", "media": {"payload": _ulaw_frame_b64()}})
+            _await_media(ws)
+
+    calls = _settled_calls(app.state.telephony_manager)
+    assert [c["call_sid"] for c in calls] == ["CA7"]
+    assert calls[0]["status"] == "completed"

@@ -772,6 +772,11 @@ def _call_config(state: Any) -> Any:
         return None
 
 
+def _closed_socket_status(status: str) -> str:
+    """A closed socket ends a live call; it is never left "in progress"."""
+    return CALL_COMPLETED if status == CALL_IN_PROGRESS else status
+
+
 @router.websocket("/media")
 async def media_socket(ws: WebSocket) -> None:
     """Twilio Media Streams socket: bridge the call to a realtime session."""
@@ -900,7 +905,7 @@ async def media_socket(ws: WebSocket) -> None:
                 break
     finally:
         if call is not None and not call.ended:
-            await call.end(reason="socket_closed", status=record_status)
+            await call.end(reason="socket_closed", status=_closed_socket_status(record_status))
         if call is not None:
             record_status = call.status
         if call_sid:
