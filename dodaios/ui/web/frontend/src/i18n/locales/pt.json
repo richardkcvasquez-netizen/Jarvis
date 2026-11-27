@@ -3688,6 +3688,10 @@
       "title": "Nós enquanto são criados",
       "open_title": "Abrir os nós enquanto são criados",
       "open_description": "Quando um agente cria um documento, uma planilha ou outro nó na conversa que você está vendo, ele abre ao lado da conversa e você acompanha a escrita."
+    },
+    "orb_only_call": {
+      "title": "Chamadas só com a esfera",
+      "description": "Durante uma chamada, mostra apenas a aparência do assistente sobre fundo escuro. Passe o ponteiro pela borda inferior para o microfone e desligar; Escape desliga."
     }
   },
   "telephony_view": {

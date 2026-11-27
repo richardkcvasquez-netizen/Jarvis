@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import { CallWindow } from "@/components/home/CallWindow";
+import { useCallView } from "@/store/callView";
 import { useEventStore } from "@/store/events";
 import { useHomeStore } from "@/store/home";
 
@@ -16,6 +17,8 @@ describe("CallWindow (a call inside the conversation)", () => {
       }
       return new Response(JSON.stringify({ stopped: true }));
     }));
+    // These cases are the classic call window; orb-only has its own file.
+    useCallView.setState({ orbOnly: false });
     useEventStore.setState({ voiceState: "idle", assistantName: "Dodaios", transcription: "", transcriptionFinal: true });
     useHomeStore.setState({ transcript: [], liveReply: "", callPending: false, callProblem: null });
   });

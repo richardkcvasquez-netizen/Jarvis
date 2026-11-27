@@ -1,3 +1,4 @@
+import { useCallView } from "@/store/callView";
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -42,6 +43,7 @@ export function OverlayTaskbarGroup() {
           <BarPersistentRow />
           <FollowCursorRow />
         </>}
+        <OrbOnlyCallRow />
         <MuteMusicRow />
         <SoundEffectsRow />
       </SettingsCard>
@@ -75,6 +77,21 @@ function ToggleRow({
           onCheckedChange={onToggle}
         />
       }
+    />
+  );
+}
+
+/** A running call as the assistant's look alone, or as the call window with its words. */
+function OrbOnlyCallRow() {
+  const t = useT();
+  const orbOnly = useCallView((s) => s.orbOnly);
+  const setOrbOnly = useCallView((s) => s.setOrbOnly);
+  return (
+    <ToggleRow
+      title={t("settings_view.orb_only_call.title")}
+      description={t("settings_view.orb_only_call.description")}
+      checked={orbOnly}
+      onToggle={setOrbOnly}
     />
   );
 }

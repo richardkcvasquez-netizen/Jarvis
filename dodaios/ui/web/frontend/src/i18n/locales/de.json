@@ -3688,6 +3688,10 @@
       "title": "Nodes beim Entstehen",
       "open_title": "Nodes beim Entstehen öffnen",
       "open_description": "Wenn ein Agent in der Unterhaltung, die du gerade ansiehst, ein Dokument, eine Tabelle oder einen anderen Node erstellt, öffnet er sich neben der Unterhaltung und du siehst zu, wie er geschrieben wird."
+    },
+    "orb_only_call": {
+      "title": "Anrufe nur mit Kugel",
+      "description": "Während eines Anrufs nur das Erscheinungsbild des Assistenten auf dunklem Grund zeigen. Mikrofon und Auflegen erscheinen am unteren Rand beim Überfahren; Escape legt auf."
     }
   },
   "telephony_view": {
