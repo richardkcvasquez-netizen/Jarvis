@@ -19,6 +19,7 @@ from uuid import uuid4
 log = logging.getLogger(__name__)
 
 _MODEL = "gemini-3.1-flash-live-preview"
+_AISTUDIO_LIVE_API_VERSION = "v1beta"
 _INPUT_RATE = 16_000
 _OUTPUT_RATE = 24_000
 
@@ -1253,7 +1254,13 @@ class GeminiLiveProvider:
         import importlib  # lazy (AP-26)
 
         google_genai = importlib.import_module("dodaios.core.google_genai")
-        return await google_genai.build_genai_client_async(self._api_key)
+        route = await google_genai.resolve_google_key_route_async(self._api_key)
+        # google-genai 3.x defaults to API v1, where the Live socket answers
+        # HTTP 404; name the version that serves Live on AI Studio.
+        options = {"api_version": _AISTUDIO_LIVE_API_VERSION} if route == "aistudio" else None
+        return await google_genai.build_genai_client_async(
+            self._api_key, http_options=options, route=route
+        )
 
     def _unconfigured_message(self) -> str:
         return "Gemini Live API key is not configured"
