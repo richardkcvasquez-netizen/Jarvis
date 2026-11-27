@@ -63,6 +63,8 @@ _HANGUP_PATTERNS: Final[tuple[str, ...]] = (
     r"\bhang ?up\b",
     r"\bhang up the phone\b",
     r"\bend the call\b",
+    r"\bend call\b",
+    r"\bdisconnect\b",
     r"\bgood ?bye\b",
     r"\bgood ?night\b",
     r"\bbye bye\b",
@@ -127,7 +129,7 @@ _SEMANTIC_CLOSING_RE = re.compile(
     r"(?:"
     r"(?:we are|we're|i am|i'm) (?:done|finished)(?: (?:here|for now|for today))?"
     r"|(?:that is|that's|that was) all(?: (?:for now|for today|i needed))?"
-    r"|that will be all|nothing else(?: for now)?|no more questions"
+    r"|that(?: will|'ll) be all|that'll do|nothing else(?: for now)?|no more questions"
     r"|i (?:have|need) to go|let's stop here|you can go now"
     r"|wir sind (?:durch|fertig)(?: für heute)?"  # i18n-allow
     r"|ich bin (?:durch|fertig)(?: für heute)?"  # i18n-allow
@@ -168,7 +170,8 @@ def user_asked_to_hang_up(user_text: str | None) -> bool:
 
 _CONFIRM_HANGUP_RE = re.compile(
     r"\A\s*(?:yes|yeah|yep|ja|sí|si|sim)"  # i18n-allow
-    r"(?:[\s,]+(?:please|bitte|por favor|hang up|end the call|"  # i18n-allow
+    r"(?:[\s,]+(?:please|bitte|por favor|hang up|end the call|disconnect|end it|"  # i18n-allow
+    r"that's all|that is all|"
     r"auflegen|leg auf|beende das gespräch|cuelga|desliga))*[\s.!]*\Z",  # i18n-allow
     re.IGNORECASE,
 )
