@@ -2007,3 +2007,34 @@ def test_every_rebuilding_adapter_can_take_a_snapshot() -> None:
                 f"{type(provider).__name__} rebuilds its transport but cannot "
                 "restore the conversation into the fresh session"
             )
+
+
+@pytest.mark.asyncio
+async def test_live_socket_asks_for_an_api_version_that_serves_live(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """google-genai 3.x defaults to API ``v1``, where Live answers HTTP 404.
+
+    The adapter names the version itself, so every installed SDK opens the
+    socket on an endpoint that serves Live.
+    """
+    seen: dict = {}
+
+    def _make_client(*, api_key=None, http_options=None, **_rest):
+        options = http_options or {}
+        seen["api_version"] = (
+            options.get("api_version")
+            if isinstance(options, dict)
+            else getattr(options, "api_version", None)
+        )
+        return _FakeGenaiClient(api_key=api_key)
+
+    from google import genai
+
+    monkeypatch.setattr(genai, "Client", _make_client)
+    provider = GeminiLiveProvider(api_key="AIza" + "x" * 35)
+
+    session = await provider.open_session(RealtimeSessionConfig(voice="Puck"))
+
+    assert seen["api_version"] == "v1beta"
+    await session.close()
