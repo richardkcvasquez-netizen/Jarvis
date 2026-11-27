@@ -3688,6 +3688,10 @@
       "title": "Nodes as they are built",
       "open_title": "Open nodes as they are built",
       "open_description": "When an agent makes a document, a sheet or another node in the conversation you are looking at, it opens beside the conversation and you watch it being written."
+    },
+    "orb_only_call": {
+      "title": "Orb-only calls",
+      "description": "During a call, show only the assistant's look on a dark screen. Hover the bottom edge for the microphone and hang-up; Escape hangs up."
     }
   },
   "telephony_view": {

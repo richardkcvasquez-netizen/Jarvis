@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState }
 import { Mic, MicOff, Phone, PhoneOff, Settings2 } from "lucide-react";
 
 import { useVoiceCall } from "@/components/agentic/useVoiceCall";
+import { CallOrbStage } from "@/components/home/CallOrbStage";
 import { TranscriptLine } from "@/components/home/VoiceStage";
 import { VoiceGlow } from "@/components/home/VoiceGlow";
 import { LookSlot } from "@/components/looks/LookSlot";
@@ -11,6 +12,7 @@ import { useStickToBottom } from "@/hooks/useStickToBottom";
 import { fill, useT } from "@/i18n";
 import { resolveAgentChatApproval } from "@/lib/agentChatApi";
 import { cn } from "@/lib/utils";
+import { useCallView } from "@/store/callView";
 import { useEventStore, type VoiceState } from "@/store/events";
 import { useHomeStore } from "@/store/home";
 import { useCallMute } from "./useCallMute";
@@ -83,6 +85,7 @@ export function CallWindow({ composerControls = false }: {
   const ringing = useHomeStore((s) => s.ringing);
   const setRinging = useHomeStore((s) => s.setRinging);
   const { active, busy, connecting, toggleCall } = useVoiceCall();
+  const orbOnly = useCallView((s) => s.orbOnly);
   // The gear opens the voice list inside the window; a new call closes it.
   const [voicePanel, setVoicePanel] = useState(false);
   const live = active || connecting;
@@ -219,6 +222,12 @@ export function CallWindow({ composerControls = false }: {
   const shown: VoiceState = live ? voiceState : pending ? "connecting" : "idle";
   const ended = !live && !pending;
   const status = ended ? t("home.call.ended") : muted && live ? t("home.call.muted") : t(STATUS_KEY[shown] ?? STATUS_KEY.idle);
+  if (orbOnly) {
+    return (
+      <CallOrbStage state={shown} status={status} label={label} active={active} busy={busy} muted={muted} live={live}
+        onHangUp={() => void toggleCall()} onToggleMute={toggleMute} />
+    );
+  }
   return (
     <section data-testid="call-window" data-state={ended ? "ended" : shown} role="region" aria-label={label} className={WINDOW}>
       {/* The voice light fills the lower part of the window, behind everything. */}

@@ -3688,6 +3688,10 @@
       "title": "Nodos mientras se crean",
       "open_title": "Abrir los nodos mientras se crean",
       "open_description": "Cuando un agente crea un documento, una hoja u otro nodo en la conversación que estás viendo, se abre junto a la conversación y ves cómo se escribe."
+    },
+    "orb_only_call": {
+      "title": "Llamadas solo con la esfera",
+      "description": "Durante una llamada, muestra solo el aspecto del asistente sobre fondo oscuro. Pasa el puntero por el borde inferior para el micrófono y colgar; Escape cuelga."
     }
   },
   "telephony_view": {
