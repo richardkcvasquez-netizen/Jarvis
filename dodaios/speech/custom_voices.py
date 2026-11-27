@@ -27,7 +27,7 @@ def _language(model: Path) -> str:
     config = model.with_name(model.name + ".json")
     try:
         code = json.loads(config.read_text(encoding="utf-8"))["language"]["code"]
-    except FileNotFoundError:
+    except FileNotFoundError:  # the config is optional: no file means an English voice
         return "en"
     except (OSError, ValueError, KeyError, TypeError) as exc:
         log.warning("Custom voice %s: unreadable %s (%s); treating it as English.",
