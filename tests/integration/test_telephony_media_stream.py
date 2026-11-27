@@ -22,6 +22,7 @@ from __future__ import annotations
 import base64
 import math
 import struct
+import time
 from typing import Any
 
 import pytest
@@ -116,6 +117,21 @@ def _await_media(ws: Any, budget: int = 40) -> dict[str, Any]:
     raise AssertionError("no outbound media")
 
 
+def _settled_calls(manager: Any, seconds: float = 5.0) -> list[dict[str, Any]]:
+    """The recent calls once none is still in progress.
+
+    The server records a call's final status after the media socket closes, on
+    its own loop, so a check made straight after the ``with`` block can still
+    see ``in_progress`` on a slow runner.
+    """
+    deadline = time.monotonic() + seconds
+    calls = manager.recent_calls()
+    while any(c["status"] == "in_progress" for c in calls) and time.monotonic() < deadline:
+        time.sleep(0.02)
+        calls = manager.recent_calls()
+    return calls
+
+
 def test_simulated_call_bridges_audio_both_ways_and_records_call(app, sessions):
     with TestClient(app) as client:
         with client.websocket_connect("/api/telephony/media") as ws:
@@ -134,7 +150,7 @@ def test_simulated_call_bridges_audio_both_ways_and_records_call(app, sessions):
     assert session.audio_in and all(len(pcm) == 320 for pcm in session.audio_in)
     assert "de-DE" in session.call_brief
     assert session.ended_with == "client_stop"
-    calls = app.state.telephony_manager.recent_calls()
+    calls = _settled_calls(app.state.telephony_manager)
     assert len(calls) == 1
     assert calls[0]["call_sid"] == "CA123"
     assert calls[0]["status"] == "completed"
@@ -159,7 +175,7 @@ def test_media_socket_records_no_audio_when_silent(app, sessions):
             ws.send_json(_start("CA9"))
             ws.send_json({"event": "stop"})
 
-    calls = app.state.telephony_manager.recent_calls()
+    calls = _settled_calls(app.state.telephony_manager)
     assert len(calls) == 1
     assert calls[0]["call_sid"] == "CA9"
     # No inbound caller audio ever arrived -> the call is flagged no_audio.
@@ -178,7 +194,7 @@ def test_session_hangup_closes_the_twilio_stream(app, sessions):
             with pytest.raises(WebSocketDisconnect):
                 for _ in range(50):
                     ws.receive_json()
-    calls = app.state.telephony_manager.recent_calls()
+    calls = _settled_calls(app.state.telephony_manager)
     assert [c["call_sid"] for c in calls] == ["CA5"]
     assert calls[0]["status"] == "completed"
 
@@ -191,7 +207,7 @@ def test_call_is_refused_when_no_realtime_session_can_hold_it(app, sessions):
             message = ws.receive()
             assert message["type"] == "websocket.close"
             assert message["code"] == 1011
-    calls = app.state.telephony_manager.recent_calls()
+    calls = _settled_calls(app.state.telephony_manager)
     assert [c["call_sid"] for c in calls] == ["CA404"]
     assert calls[0]["status"] == "failed"
     assert app.state.telephony_manager.active_calls == 0
