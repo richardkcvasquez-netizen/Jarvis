@@ -8,6 +8,7 @@ from dodaios.speech.hangup import (
     END_CALL_SIGNAL,
     HANGUP_RE,
     HangupConfirmation,
+    confirms_hangup,
     contains_end_signal,
     hangup_cancelled_reply,
     hangup_confirmation_question,
@@ -277,3 +278,28 @@ def test_portuguese_answers_to_the_hangup_question(answer, expected):
 def test_portuguese_hangup_question_and_cancel_reply():
     assert hangup_confirmation_question("pt-PT") == "Queres mesmo desligar?"
     assert hangup_cancelled_reply("pt") == "Ok, continuamos a falar."
+
+
+# Everyday English closings and answers (live 2026-11-26: "that'll be all" and
+# "yes, disconnect" were not understood, and the call could not be ended by voice).
+@pytest.mark.parametrize(
+    "text",
+    ["That'll be all, Jarvis.", "that’ll be all", "Disconnect.", "Jarvis, disconnect",
+     "End call.", "That'll do, thanks."],
+)
+def test_everyday_closings_ask_to_hang_up(text):
+    assert user_asked_to_hang_up(text)
+
+
+@pytest.mark.parametrize("text", ["Yes, disconnect.", "Yes, end it.", "Yes, that's all."])
+def test_everyday_yes_confirms_the_hang_up(text):
+    assert confirms_hangup(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Disconnect the printer.", "That'll be all the files?", "Yes, but first check the mail."],
+)
+def test_a_closing_word_inside_a_task_is_not_a_hang_up(text):
+    assert not user_asked_to_hang_up(text)
+    assert not confirms_hangup(text)
