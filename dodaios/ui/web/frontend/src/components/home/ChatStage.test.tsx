@@ -8,6 +8,7 @@ import { EMPTY_TIMELINE, reduceEvents } from "@/components/agentchat/reduce";
 import type { AgentChatCatalog, AgentChatEvent } from "@/lib/agentChatApi";
 import { AgentChatStoreProvider } from "@/components/agentchat/AgentChatStoreContext";
 import { useAgentChatStore, useAgentSessionStore } from "@/store/agentChat";
+import { useCallView } from "@/store/callView";
 import { useEventStore } from "@/store/events";
 import { useHomeStore } from "@/store/home";
 import { composerDraftsFor } from "@/components/agentchat/composerDrafts";
@@ -974,6 +975,8 @@ describe("ChatStage (agent chat)", () => {
   });
 
   it("opens the call window above the composer for a call, a call asked for and a call that failed", async () => {
+    // The classic call window; orb-only calls are covered below.
+    useCallView.setState({ orbOnly: false });
     useAgentChatStore.setState({ activeSessionId: "s1", timeline: reduceEvents(EMPTY_TIMELINE, [ev("user_message", { text: "hello" })]) });
     useHomeStore.setState({ callPending: false, callProblem: null });
     useEventStore.setState({ voiceState: "idle" });
@@ -997,6 +1000,17 @@ describe("ChatStage (agent chat)", () => {
     expect(screen.queryByTestId("call-window")).toBeNull();
     // The conversation never left the page.
     expect(screen.getByTestId("agent-message-user").textContent).toContain("hello");
+  });
+
+  it("shows a running call as the look alone over the whole window when orb-only is on", () => {
+    useCallView.setState({ orbOnly: true });
+    useAgentChatStore.setState({ activeSessionId: "s1", timeline: reduceEvents(EMPTY_TIMELINE, [ev("user_message", { text: "hello" })]) });
+    useHomeStore.setState({ callPending: false, callProblem: null });
+    useEventStore.setState({ voiceState: "listening" });
+    render(<ChatStage />);
+    expect(screen.queryByTestId("call-window")).toBeNull();
+    expect(screen.getByTestId("call-orb-stage").parentElement).toBe(document.body);
+    useCallView.setState({ orbOnly: false });
   });
 
   it("offers Send for the next message and shows no Stop button while a send is in flight", () => {
