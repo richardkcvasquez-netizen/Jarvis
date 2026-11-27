@@ -309,7 +309,7 @@
   "worker_allowed": false,
   "ui_section": "apikeys",
   "description_sha256": "e44d029a6f9064a8d049c9982b11bd97a3ab12510076d480dd3c884f04f82c9a",
-  "params_sha256": "4f0fdffb4146f5aeb27990420958666ae192f1ec728e6f8cba29e2824a9b1e32",
+  "params_sha256": "4aa368bc3495a08dc055e96c0654005dfa8b71391549464773d24460565f646f",
   "voice_aliases": {
    "de": "ffc2925ffd4228797e6fe818c9cbab3269ebdf0a3686017527522b46b07783a4",
    "en": [
@@ -451,7 +451,7 @@
   "worker_allowed": true,
   "ui_section": "apikeys",
   "description_sha256": "593dc31149251cf01af44125cfd879f7f7dc5d078a57bf589f1d905b4170e28d",
-  "params_sha256": "7611796c5d502d656670ef1a6b2092aa20000724c8455e1f3d06bb3cfcc4c7c2",
+  "params_sha256": "037824b720a08248833bda66646ae413ccbab0ecfe9bbf84aec25050fba3cef6",
   "voice_aliases": {
    "de": "d12fff77c55857e67e57c2a8a3d297aface6766705573648779301ca7aff856b",
    "en": [
