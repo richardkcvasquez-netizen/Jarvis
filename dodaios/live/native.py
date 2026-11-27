@@ -209,6 +209,19 @@ class NativeLiveVoiceSession(LiveVoiceSession):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._native_turn_complete = True
+        # [tts] speak_calls: the answers are spoken with the app's own voice.
+        self._voice_swap: Any = None
+        if getattr(getattr(self._config, "tts", None), "speak_calls", False):
+            from dodaios.live.voice_swap import VoiceSwap  # lazy: loads the TTS plugins
+
+            self._voice_swap = VoiceSwap(
+                self._config, output_rate=self._provider.output_sample_rate,
+                send_pcm=self._send_app_voice, language=lambda: self._language,
+            )
+
+    async def _send_app_voice(self, pcm: bytes) -> None:
+        await self._note_speaking()
+        await self._send_binary(pcm)
 
     async def _start(self, message: dict) -> None:
         self._adopt_desktop_session()
@@ -536,7 +549,7 @@ class NativeLiveVoiceSession(LiveVoiceSession):
                         if await self._wait_for_connection():
                             break
                         return
-                    await self._native_event(event)
+                    await self._provider_event(event)
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -551,9 +564,34 @@ class NativeLiveVoiceSession(LiveVoiceSession):
                 }
             )
         finally:
+            if self._voice_swap is not None:
+                self._voice_swap.cancel()
             unregister(self.session_id)
             self._notify_ended()
             self._closed.set()
+
+    async def _provider_event(self, event: Any) -> None:
+        """One provider event, after the app voice (if on) has taken its part."""
+        if self._voice_swap is not None and self._app_voice_event(event):
+            return
+        await self._native_event(event)
+
+    def _app_voice_event(self, event: Any) -> bool:
+        """Steer the app voice; True when the event is provider audio it replaces."""
+        swap = self._voice_swap
+        if event.type == "audio_delta":
+            self._native_turn_complete = False
+            self._report_started()
+            return True
+        if event.type == "output_transcript_delta":
+            swap.feed(event.text or "")
+        elif event.type == "turn_complete":
+            swap.flush()
+        elif event.type == "interrupted" or (
+            event.type == "speech_started" and (self._speaking or self.playback_active)
+        ):
+            swap.cancel()
+        return False
 
     async def _native_event(self, event: Any) -> None:
         assert self._tools is not None and self._ledger is not None
