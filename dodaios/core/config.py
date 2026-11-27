@@ -425,8 +425,8 @@ class TTSConfig(BaseModel):
     # SAPI5 (Windows robotic TTS) is an emergency brake: default false means no silent fallback to
     # the Windows voice when a cloud voice fails.
     allow_sapi5_fallback: bool = False
-    # Voice-consistency knobs for generative TTS (Gemini only): one generation per utterance, pinned
-    # RNG seed, lower prosody variance.
+    speak_calls: bool = False  # live calls speak with this voice, not the provider's
+    # Gemini-only consistency knobs: one generation per utterance, pinned seed, lower variance.
     chunk_by_sentence: bool = True
     seed: int | None = None
     temperature: float | None = None

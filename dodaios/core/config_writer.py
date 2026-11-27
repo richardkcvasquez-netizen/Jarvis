@@ -513,6 +513,19 @@ def set_tts_volume(volume: float, *, path: Path = DEFAULT_CONFIG_FILE) -> None:
         log.warning("Could not sync tts.volume to config-soll.json: %s", exc)  # i18n-allow
 
 
+def set_tts_speak_calls(enabled: bool, *, path: Path = DEFAULT_CONFIG_FILE) -> None:
+    """Set ``[tts] speak_calls``: live calls speak with the read-aloud voice.
+
+    Synced to the drift-guard snapshot like :func:`set_tts_volume`, so the
+    choice is not reverted. Takes effect on the next call.
+    """
+    _patch_table(path, "tts", "speak_calls", bool(enabled))
+    try:
+        _update_config_soll_section("tts", {"speak_calls": bool(enabled)})  # i18n-allow
+    except (OSError, ValueError) as exc:  # best-effort: the TOML write above already holds
+        log.warning("Could not sync tts.speak_calls to config-soll.json: %s", exc)  # i18n-allow
+
+
 def set_audio_device(kind: str, value: str, *, path: Path = DEFAULT_CONFIG_FILE) -> None:
     """Set ``[audio] input_device`` / ``[audio] output_device``.
 
